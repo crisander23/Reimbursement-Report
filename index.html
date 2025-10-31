@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reimbursement Form & Generator</title>
+    <style>
+        /* --- STYLES FOR THE DATA ENTRY FORM (NOTION-STYLE) --- */
+        .form-view {
+            font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Arial", sans-serif;
+            background-color: #ffffff;
+            color: #37352f;
+        }
+        .form-container { 
+            max-width: 100%; 
+            margin: 0;
+            padding: 20px 5%; 
+        }
+        .form-container h1, .form-container h2, .form-container h3 { color: #37352f; font-weight: 600; }
+        .form-container h1 { font-size: 2em; }
+        .form-container h2 { display: flex; justify-content: space-between; align-items: center; font-size: 1.5em; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-top: 40px; margin-bottom: 20px; }
+        .form-container h3 { font-size: 1.2em; display: flex; justify-content: space-between; align-items: center; }
+        .form-section, .category-section { margin-bottom: 25px; }
+        .category-section { border: 1px solid #e0e0e0; border-radius: 4px; padding: 25px; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 25px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-container label { font-weight: 500; margin-bottom: 8px; font-size: 0.9em; color: #555; }
+        .form-container input[type="text"], .form-container input[type="date"], .form-container textarea {
+            padding: 8px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;
+            width: 100%; box-sizing: border-box; background-color: #fafafa; font-family: inherit;
+        }
+        .form-container textarea { resize: vertical; overflow-y: hidden; min-height: 40px; }
+        .form-container table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .form-container th, .form-container td { border-bottom: 1px solid #eee; padding: 12px 4px; text-align: left; vertical-align: middle; }
+        .form-container th { font-weight: 500; font-size: 0.9em; color: #555; }
+        .form-container td:first-child { text-align: center; color: #888; font-weight: bold; }
+        .form-container button {
+            padding: 8px 12px; font-size: 14px; font-weight: 500; color: #37352f; background-color: #f0f0f0;
+            border: 1px solid #ddd; border-radius: 4px; cursor: pointer; transition: background-color 0.1s ease;
+        }
+        .form-container button:hover { background-color: #e0e0e0; }
+        #generateReportBtn { background-color: #28a745; color: #fff; font-weight: 600; }
+        #generateReportBtn:hover { background-color: #218838; }
+        .signature-preview { max-width: 150px; max-height: 80px; margin-top: 10px; border: 1px dashed #ccc; padding: 5px; }
+        
+        .proof-container { display: flex; align-items: center; gap: 5px; }
+        .proof-filename { font-size: 12px; color: #555; background: #f0f0f0; padding: 4px 8px; border-radius: 4px; }
+        .proof-thumbnail { max-width: 40px; max-height: 40px; border: 1px dashed #eee; display: inline-block; object-fit: cover; }
+        .clear-proof-btn { font-size: 16px !important; background: none !important; border: none !important; color: #c5221f !important; padding: 0 5px !important; }
+        
+        .icon-btn { background: none !important; border: none !important; padding: 4px !important; opacity: 0.6; }
+        .icon-btn:hover { opacity: 1; }
+        .icon-btn svg { width: 16px; height: 16px; vertical-align: middle; }
+        .delete-btn svg { color: #c5221f; }
+        .duplicate-btn svg { color: #f97316; }
+
+        .invalid-field { border-color: #c5221f !important; }
+        
+        /* --- STYLES FOR THE HIDDEN REPORT --- */
+        .report-view { display: none; font-family: Calibri, Arial, sans-serif; font-size: 10pt; color: #000; }
+        .report-view, .report-view * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        
+        .report-view .header { display: grid; grid-template-columns: 1fr 1.5fr 1fr; align-items: flex-start; margin-bottom: 20px; }
+        .report-view .logo { width: 200px; }
+        .report-view .header-text { text-align: center; }
+        .report-view .title { font-size: 1.3em; font-weight: bold; margin-bottom: 5px; }
+        
+        .report-view table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .report-view th, .report-view td { border: 1px solid #000; padding: 6px; }
+        
+        .report-view .period,
+        .report-view .expense-table th,
+        .report-view .expense-table tfoot td,
+        .report-view .footer-section .name { font-family: Calibri, Arial, sans-serif; font-size: 10pt; font-weight: bold; }
+
+        .report-view .expense-table th { background-color: #adb9ca !important; text-align: center; }
+        .report-view .expense-table .category-title-row td { background-color: #fff !important; font-weight: bold; text-align: center; }
+        .report-view .expense-table .item-row { background-color: #d9e2f3 !important; }
+        .report-view .expense-table .total-row { background-color: #8496b0 !important; color: #000 !important; }
+        
+        .report-view .footer-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 80px; row-gap: 40px; margin-top: 30px; align-items: end; }
+        .report-view .footer-section { position: relative; padding-top: 35px; }
+        .report-view .footer-section .label { position: absolute; top: 0; left: 0; font-size: 0.9em; }
+        .report-view .footer-section .position { font-size: 0.9em; margin-top: 2px; }
+        .report-signature { 
+            position: absolute; 
+            bottom: 20px; /* THIS IS THE FIX: Lowered the signature */
+            left: 0;
+            max-width: 150px; 
+            max-height: 50px;
+            object-fit: contain; 
+        }
+
+        .proof-page { page-break-before: always; padding-top: 20px; }
+        .proof-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .proof-item { padding: 10px; text-align: center; page-break-inside: avoid; }
+        .proof-item p { margin: 0 0 10px 0; font-size: 9pt; }
+        .proof-item img { max-width: 100%; height: auto; border: 1px solid #eee; }
+
+        @media print {
+            body { margin: 0; padding: 0; }
+            .form-view { display: none !important; }
+            .report-view { display: block !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-view">
+    <div class="form-container">
+        <h1>Reimbursement Form</h1>
+        <div class="form-section">
+            <h2>
+                <span>Report Details</span>
+                <button type="button" id="generateReportBtn">Generate Report</button>
+            </h2>
+            <div class="form-grid">
+                <div class="form-group"><label for="dateFrom">Period From</label><input type="date" id="dateFrom"></div>
+                <div class="form-group"><label for="dateTo">Period To</label><input type="date" id="dateTo"></div>
+                <div class="form-group">
+                    <label for="employeeName">Name of Employee</label>
+                    <input type="text" id="employeeName">
+                    <label for="employeeSignatureUpload" style="margin-top: 10px;">Upload Employee Signature (PNG only)</label>
+                    <input type="file" id="employeeSignatureUpload" accept="image/png">
+                    <img id="employeeSignaturePreview" class="signature-preview" src="" alt="Signature Preview" style="display:none;">
+                </div>
+                <div class="form-group"><label for="employeePosition">Position</label><input type="text" id="employeePosition"></div>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="receivedBudget">Total Received Budget (Optional)</label>
+                <input type="text" inputmode="decimal" class="amountInput" id="receivedBudget" placeholder="0.00">
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="projectName">Project Name</label>
+                <input type="text" id="projectName" placeholder="e.g., NEA - Phase 2">
+            </div>
+        </div>
+        <div id="categoriesContainer"></div>
+        <button type="button" id="addCategoryBtn" style="width:100%; margin-top:15px;">+ Add Another Category</button>
+    </div>
+</div>
+
+<div class="report-view">
+    <div class="header">
+        <img src="onedoc-logo.png" alt="Company Logo" class="logo">
+        <div class="header-text">
+            <div class="title">Reimbursement Report</div>
+            <div class="period" id="reportPeriod"></div>
+        </div>
+        <div></div> 
+    </div>
+    <table class="expense-table">
+        <thead>
+            <tr>
+                <th style="width:15%;">Doc. Sup.</th>
+                <th style="width:15%;">Date</th>
+                <th style="width:40%;" id="reportProjectName"></th>
+                <th style="width:15%;">Amount</th>
+                <th style="width:15%;">Remarks</th>
+            </tr>
+        </thead>
+        <tbody id="reportExpenseTableBody"></tbody>
+        <tfoot>
+            <tr class="total-row"><td colspan="3">TOTAL REIMBURSEMENT SUBMITTED</td><td colspan="2" id="reportTotalReimbursement"></td></tr>
+            <tr class="total-row"><td colspan="3">TOTAL RECEIVED BUDGET</td><td colspan="2" id="reportReceivedBudget"></td></tr>
+            <tr class="total-row"><td colspan="3" id="reportFinalTotalLabel">MOUNT FOR RETURN</td><td colspan="2" id="reportFinalTotal"></td></tr>
+        </tfoot>
+    </table>
+    <div class="footer-grid">
+        <div class="footer-section">
+            <span class="label">Certified True and Correct by:</span>
+            <img id="reportEmployeeSignature" class="report-signature" src="" alt="Employee Signature" style="display:none;">
+            <div class="name" id="reportEmployeeName"></div>
+            <div class="position" id="reportEmployeePosition"></div>
+        </div>
+        <div class="footer-section">
+            <span class="label">Reviewed / Verified by:</span>
+            <div class="name" id="reportFinanceName">Name of Finance</div>
+            <div class="position">Finance</div>
+        </div>
+        <div class="footer-section">
+            <span class="label">Approved by:</span>
+            <div class="name" id="reportApprover1Name">Approved by who name</div>
+            <div class="position">VP - Technology and Solutions</div>
+        </div>
+        <div class="footer-section">
+            <span class="label" style="opacity: 0;">Approved by:</span>
+            <div class="name" id="reportApprover2Name">Name of President</div>
+            <div class="position">President and CEO</div>
+        </div>
+    </div>
+    <div class="proof-page">
+        <div id="reportProofGrid" class="proof-grid"></div>
+    </div>
+</div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    const generateReportBtn = document.getElementById('generateReportBtn');
+    const categoriesContainer = document.getElementById('categoriesContainer');
+    const employeeSignatureUpload = document.getElementById('employeeSignatureUpload');
+    const employeeSignaturePreview = document.getElementById('employeeSignaturePreview');
+
+    let employeeSignatureData = '';
+
+    employeeSignatureUpload.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                employeeSignaturePreview.src = e.target.result;
+                employeeSignaturePreview.style.display = 'block';
+                employeeSignatureData = e.target.result; 
+            };
+            reader.readAsDataURL(file);
+        } else {
+            employeeSignaturePreview.src = '';
+            employeeSignaturePreview.style.display = 'none';
+            employeeSignatureData = '';
+        }
+    });
+
+    document.body.addEventListener('click', (event) => {
+        const addBtn = event.target.closest('.add-row-btn');
+        const deleteBtn = event.target.closest('.delete-btn');
+        const duplicateBtn = event.target.closest('.duplicate-btn');
+        const deleteCategoryBtn = event.target.closest('.delete-category-btn');
+        const clearProofBtn = event.target.closest('.clear-proof-btn');
+
+        if (addBtn) {
+            addBtn.closest('.category-section').querySelector('.expense-table-body').appendChild(createExpenseRow());
+        }
+        if (deleteBtn && !deleteCategoryBtn) { 
+            deleteBtn.closest('tr').remove();
+            calculateAllTotals();
+        }
+        if (duplicateBtn) {
+            const sourceRow = duplicateBtn.closest('tr');
+            const newRow = createExpenseRow();
+            
+            const sourceInputs = sourceRow.querySelectorAll('input, textarea');
+            const newInputs = newRow.querySelectorAll('input, textarea');
+            
+            sourceInputs.forEach((input, index) => {
+                if (input.type !== 'file') {
+                    newInputs[index].value = input.value;
+                }
+            });
+
+            const sourceProofInput = sourceRow.querySelector('.proofUpload');
+            const newProofInput = newRow.querySelector('.proofUpload');
+            if (sourceProofInput && newProofInput && sourceProofInput.dataset.imageData) {
+                const imageData = sourceProofInput.dataset.imageData;
+                const filename = sourceProofInput.dataset.filename;
+                newProofInput.dataset.imageData = imageData;
+                newProofInput.dataset.filename = filename;
+
+                const proofContainer = newProofInput.closest('.proof-container');
+                updateProofDisplay(proofContainer, filename, imageData);
+            }
+
+            sourceRow.insertAdjacentElement('afterend', newRow);
+            calculateAllTotals();
+        }
+        if (deleteCategoryBtn) {
+            if (document.querySelectorAll('.category-section').length > 1) {
+                deleteCategoryBtn.closest('.category-section').remove();
+                calculateAllTotals();
+            } else {
+                alert("Cannot remove the last category.");
+            }
+        }
+        if (clearProofBtn) {
+            const proofContainer = clearProofBtn.closest('.proof-container');
+            const fileInput = proofContainer.querySelector('.proofUpload');
+            fileInput.value = ''; 
+            delete fileInput.dataset.imageData;
+            delete fileInput.dataset.filename;
+            updateProofDisplay(proofContainer, null, null);
+        }
+    });
+
+    document.body.addEventListener('input', (event) => {
+        if (event.target.matches('.description-input')) {
+            event.target.style.height = 'auto';
+            event.target.style.height = (event.target.scrollHeight) + 'px';
+        }
+
+        if (event.target.matches('.amountInput, #receivedBudget')) {
+            const value = event.target.value;
+            event.target.value = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+            calculateAllTotals();
+        }
+    });
+
+    document.body.addEventListener('change', (event) => {
+        if (event.target.matches('.proofUpload')) {
+            const fileInput = event.target;
+            const proofContainer = fileInput.closest('.proof-container');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fileInput.dataset.imageData = e.target.result;
+                    fileInput.dataset.filename = file.name;
+                    updateProofDisplay(proofContainer, file.name, e.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+    });
+
+    addCategoryBtn.addEventListener('click', () => addCategoryToForm());
+    generateReportBtn.addEventListener('click', populateAndPrintReport);
+
+    function updateProofDisplay(container, filename, imageData) {
+        const fileInput = container.querySelector('.proofUpload');
+        const filenameDisplay = container.querySelector('.proof-filename');
+        const thumbnail = container.querySelector('.proof-thumbnail');
+        const clearBtn = container.querySelector('.clear-proof-btn');
+
+        if (filename && imageData) {
+            fileInput.style.display = 'none';
+            filenameDisplay.textContent = filename;
+            filenameDisplay.style.display = 'inline-block';
+            thumbnail.src = imageData;
+            thumbnail.style.display = 'inline-block';
+            clearBtn.style.display = 'inline-block';
+        } else {
+            fileInput.style.display = 'block';
+            filenameDisplay.style.display = 'none';
+            thumbnail.style.display = 'none';
+            clearBtn.style.display = 'none';
+        }
+    }
+
+    function createExpenseRow() {
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td>S.S</td>
+            <td><input type="date"></td>
+            <td><textarea class="description-input" placeholder="*Description" rows="1"></textarea></td>
+            <td><input type="text" inputmode="decimal" class="amountInput" placeholder="0.00"></td>
+            <td><input type="text" placeholder="Remarks"></td>
+            <td>
+                <div class="proof-container">
+                    <input type="file" accept="image/png, image/jpeg" class="proofUpload" style="width: auto;">
+                    <span class="proof-filename" style="display:none;"></span>
+                    <img class="proof-thumbnail" src="" alt="Proof" style="display:none;">
+                    <button type="button" class="clear-proof-btn" style="display:none;" title="Clear proof">&times;</button>
+                </div>
+            </td>
+            <td>
+                <button type="button" class="icon-btn duplicate-btn" title="Duplicate Row">
+                    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V2zm2 0h6v10H6V2zM2 4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1H4a2 2 0 0 1-2-2V4z"/></svg>
+                </button>
+                <button type="button" class="icon-btn delete-btn" title="Remove Row">
+                    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                </button>
+            </td>
+        `;
+        return newRow;
+    }
+
+    function addCategoryToForm() {
+        const categoryCount = document.querySelectorAll('.category-section').length + 1;
+        const newCategory = document.createElement('div');
+        newCategory.className = 'category-section';
+        newCategory.innerHTML = `
+            <h3>
+                <span>Category ${categoryCount}: <input type="text" class="category-name" placeholder="e.g., MEALS" style="display: inline; width: 40%;"></span>
+                <button type="button" class="delete-category-btn icon-btn delete-btn" title="Remove Category">
+                     <svg viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/></svg>
+                </button>
+            </h3>
+            <table>
+                <thead><tr><th>Doc. Sup.</th><th>Date</th><th>Description</th><th>Amount (₱)</th><th>Remarks</th><th>Proof</th><th style="width: 80px;">Actions</th></tr></thead>
+                <tbody class="expense-table-body"></tbody>
+            </table>
+            <div style="text-align:right; margin-top:10px;"><button type="button" class="add-row-btn">+ Add Row</button></div>
+        `;
+        newCategory.querySelector('.expense-table-body').appendChild(createExpenseRow());
+        categoriesContainer.appendChild(newCategory);
+    }
+    
+    addCategoryToForm();
+
+    function calculateAllTotals() { /* Placeholder */ }
+
+    function validateForm() {
+        let isValid = true;
+        document.querySelectorAll('.invalid-field').forEach(el => el.classList.remove('invalid-field'));
+
+        const requiredFields = [
+            { selector: '#dateFrom', optional: false }, { selector: '#dateTo', optional: false },
+            { selector: '#employeeName', optional: false }, { selector: '#employeePosition', optional: false },
+            { selector: '#projectName', optional: false }, { selector: '#employeeSignatureUpload', optional: false }
+        ];
+
+        requiredFields.forEach(field => {
+            const input = document.querySelector(field.selector);
+            if (!input.value) {
+                isValid = false;
+                input.classList.add('invalid-field');
+            }
+        });
+
+        document.querySelectorAll('.category-section').forEach(category => {
+            const categoryNameInput = category.querySelector('.category-name');
+            if (!categoryNameInput.value) {
+                isValid = false;
+                categoryNameInput.classList.add('invalid-field');
+            }
+            category.querySelectorAll('tbody tr').forEach(row => {
+                const fieldsInRow = row.querySelectorAll('input[type="date"], textarea, input.amountInput');
+                fieldsInRow.forEach(field => {
+                    if (!field.value) {
+                        isValid = false;
+                        field.classList.add('invalid-field');
+                    }
+                });
+                
+                const proofInput = row.querySelector('.proofUpload');
+                if (proofInput && !proofInput.value && !proofInput.dataset.imageData) {
+                    isValid = false;
+                    proofInput.closest('.proof-container').classList.add('invalid-field');
+                }
+            });
+        });
+
+        if (!isValid) {
+            alert('Please fill out all required fields, highlighted in red.');
+        }
+        return isValid;
+    }
+
+    function populateAndPrintReport() {
+        if (!validateForm()) {
+            return; 
+        }
+        
+        const dateFromInput = document.getElementById('dateFrom').value;
+        const dateToInput = document.getElementById('dateTo').value;
+        const dateOptions = { month: 'long', day: 'numeric', year: 'numeric' };
+        const dateFrom = dateFromInput ? new Date(dateFromInput).toLocaleDateString('en-US', dateOptions) : '';
+        const dateTo = dateToInput ? new Date(dateToInput).toLocaleDateString('en-US', dateOptions) : '';
+        
+        let totalReimbursement = 0;
+        document.querySelectorAll('.amountInput').forEach(input => {
+            if (input.id !== 'receivedBudget') {
+                totalReimbursement += parseFloat(input.value) || 0;
+            }
+        });
+        const receivedBudget = parseFloat(document.getElementById('receivedBudget').value) || 0;
+        const balance = receivedBudget - totalReimbursement;
+
+        document.getElementById('reportPeriod').textContent = `For the Period of ${dateFrom} to ${dateTo}`;
+        document.getElementById('reportProjectName').textContent = document.getElementById('projectName').value;
+        document.getElementById('reportEmployeeName').textContent = document.getElementById('employeeName').value;
+        document.getElementById('reportEmployeePosition').textContent = document.getElementById('employeePosition').value;
+
+        const reportEmployeeSignature = document.getElementById('reportEmployeeSignature');
+        if (employeeSignatureData) {
+            reportEmployeeSignature.src = employeeSignatureData;
+            reportEmployeeSignature.style.display = 'block';
+        } else {
+            reportEmployeeSignature.style.display = 'none';
+        }
+        
+        const reportTableBody = document.getElementById('reportExpenseTableBody');
+        reportTableBody.innerHTML = '';
+        
+        const proofGrid = document.getElementById('reportProofGrid');
+        proofGrid.innerHTML = '';
+        let hasProofs = false;
+
+        document.querySelectorAll('.category-section').forEach(category => {
+            const categoryName = category.querySelector('.category-name').value.toUpperCase();
+            const categoryTitleRow = document.createElement('tr');
+            categoryTitleRow.className = 'category-title-row';
+            categoryTitleRow.innerHTML = `<td colspan="5">${categoryName}</td>`;
+            reportTableBody.appendChild(categoryTitleRow);
+
+            category.querySelectorAll('tbody tr').forEach(row => {
+                const cells = row.cells;
+                const dateVal = cells[1].querySelector('input').value;
+                const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-CA') : '';
+                const description = cells[2].querySelector('textarea').value;
+                const amount = parseFloat(cells[3].querySelector('input').value || 0).toFixed(2);
+                const remarks = cells[4].querySelector('input').value;
+                
+                const newReportRow = document.createElement('tr');
+                newReportRow.className = 'item-row';
+                newReportRow.innerHTML = `
+                    <td style="text-align:center;">${cells[0].textContent}</td>
+                    <td>${formattedDate}</td>
+                    <td>${description}</td>
+                    <td>₱ ${amount}</td>
+                    <td>${remarks}</td>
+                `;
+                reportTableBody.appendChild(newReportRow);
+
+                const proofFileInput = cells[5].querySelector('.proofUpload');
+                const proofImageData = proofFileInput ? proofFileInput.dataset.imageData : '';
+                if(proofImageData) {
+                    hasProofs = true;
+                    const proofItem = document.createElement('div');
+                    proofItem.className = 'proof-item';
+                    proofItem.innerHTML = `<p>${description || 'No Description'}</p><img src="${proofImageData}" alt="Proof Image">`;
+                    proofGrid.appendChild(proofItem);
+                }
+            });
+        });
+
+        document.querySelector('.proof-page').style.display = hasProofs ? 'block' : 'none';
+
+        document.getElementById('reportTotalReimbursement').innerHTML = `<span>₱</span> <span style="float:right;">${totalReimbursement.toFixed(2)}</span>`;
+        document.getElementById('reportReceivedBudget').innerHTML = receivedBudget > 0 ? `<span>₱</span> <span style="float:right;">${receivedBudget.toFixed(2)}</span>` : '<span style="float:right;">-</span>';
+        
+        if (receivedBudget > 0) {
+            document.getElementById('reportFinalTotalLabel').textContent = 'MOUNT FOR RETURN';
+            document.getElementById('reportFinalTotal').innerHTML = `<span>₱</span> <span style="float:right;">${balance.toFixed(2)}</span>`;
+        } else {
+            document.getElementById('reportFinalTotalLabel').textContent = 'TOTAL AMOUNT TO BE REIMBURSED';
+            document.getElementById('reportFinalTotal').innerHTML = `<span>₱</span> <span style="float:right;">${totalReimbursement.toFixed(2)}</span>`;
+        }
+        
+        window.print();
+    }
+});
+</script>
+
+</body>
+</html>
